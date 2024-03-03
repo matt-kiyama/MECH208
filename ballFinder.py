@@ -3,7 +3,7 @@ import numpy as np
 
 #0 is laptop cam 
 #1 is usb camera
-vid = cv2.VideoCapture(1)
+vid = cv2.VideoCapture(0)
 prevCircle = None
 dist = lambda x1,y1,x2,y2: (x1-x2)**2+(y1-y2)**2
 
@@ -18,20 +18,15 @@ while(True):
 
     #gray and blur normal color video frame
     grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurFrame = cv2.GaussianBlur(grayFrame, (21,21), 0)  #larger odd intergers = more blur
+    blurFrame = cv2.GaussianBlur(grayFrame, (13,13), 0)  #larger odd intergers = more blur
   
     
     # Display the resulting frame 
     #cv2.imshow('frame', frame) 
-    cv2.imshow('blurframe', blurFrame) 
+    #cv2.imshow('blurframe', blurFrame) 
 
     #returns a list of circles
-    circles = cv2.HoughCircles(blurFrame, 
-                               cv2.HOUGH_GRADIENT, 1.2, 100, 
-                               param1 = 100, 
-                               param2 = 30,
-                               minRadius = 75,
-                               maxRadius = 400)
+    circles = cv2.HoughCircles(blurFrame, cv2.HOUGH_GRADIENT, 1, 100, param1 = 100, param2 = 30, minRadius = 0, maxRadius = 100)
     
     if circles is not None:
         circles = np.uint16(np.around(circles))
@@ -41,11 +36,11 @@ while(True):
             if prevCircle is not None:
                 if dist(chosen[0], chosen[1], prevCircle[0], prevCircle[1]) <= dist(i[0], i[1], prevCircle[0], prevCircle[1]):
                     chosen = i
-        cv2.circle(blurFrame, (chosen[0], chosen[1]), 1, (0,100,100), 3)
-        cv2.circle(blurFrame, (chosen[0], chosen[1]), chosen[2], (255,0,255), 3)
+        cv2.circle(frame, (chosen[0], chosen[1]), 1, (0,100,100), 3)
+        cv2.circle(frame, (chosen[0], chosen[1]), chosen[2], (255,0,255), 3)
         prevCircle = chosen
     
-    cv2.imshow("circles", blurFrame)
+    cv2.imshow("circles", frame)
       
     # the 'q' button is set as the 
     # quitting button you may use any 

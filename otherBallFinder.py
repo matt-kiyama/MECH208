@@ -3,7 +3,13 @@ import cv2 as cv
 import time
 
 #Initialize the capture 
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0)
+
+white_upper = [255, 255, 255]
+white_lower = [150, 150, 150]
+
+lower = np.array(white_lower, dtype = "uint8")
+upper = np.array(white_upper, dtype = "uint8")
 
 def ballFinder(cap):
     ret, frame = cap.read() 
@@ -13,7 +19,12 @@ def ballFinder(cap):
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
         lower_value = np.array([00,80,100])
         higher_value = np.array([50,255,255])
-        mask = cv.inRange(hsv, lower_value, higher_value)
+        lower_orange = (5,50,50)
+        higher_orange = (15,255,255)
+        lower_white = np.array([9,0,97])
+        higher_white = np.array([36,119,255])
+        #mask = cv.inRange(hsv, lower_white, higher_white)
+        mask = cv.inRange(frame, lower, upper)
         mask = cv.blur(mask,(6,6))                        
         mask = cv.erode(mask, None, iterations=2)         
         mask = cv.dilate(mask, None, iterations=2)        
