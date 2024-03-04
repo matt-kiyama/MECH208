@@ -88,7 +88,7 @@ def detect_square(frame, min_area=1000, max_area=5000):
                     center_x = x + w // 2
                     center_y = y + h // 2
 
-                    return center_x, center_y, w
+                    return center_x, center_y
 
     # Return None if no square is detected
     return None
@@ -112,7 +112,7 @@ while True:
 
     # Display the result
     if square_result is not None:
-        square_center_x, square_center_y, w = square_result
+        square_center_x, square_center_y = square_result
         #print(f"Square center coordinates: ({square_center_x}, {square_center_y})")
 
     if circle_result is not None:
@@ -122,9 +122,7 @@ while True:
 
     if square_result is not None and circle_result is not None:
         center_error = dist(circle_center_x, circle_center_y, square_center_x, square_center_y)
-        edge_error = center_error - (w + circle_radius)
         print(f"Center Error:", center_error)
-        print(f"Edge Error: ", edge_error)
 
     cv2.imshow('Square and Circle Detection', frame)
 
