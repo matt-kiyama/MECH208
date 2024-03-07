@@ -101,6 +101,15 @@ def getErrors(xy_1, xy_2):
     return error
 
 
+lastderivative = 0 
+lastlastderivative = 0 
+integral = 0
+derivative = 0 
+pid = 0
+
+
+
+
 # Open a video capture object (you can replace '0' with the video file name)
 cap = cv2.VideoCapture(0)
 
