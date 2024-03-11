@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
 
 prevCircle = None
 dist = lambda x1,y1,x2,y2: (x1-x2)**2+(y1-y2)**2
@@ -100,15 +101,34 @@ def getErrors(xy_1, xy_2):
     error = dist(x1, y1, x2, y2)
     return error
 
+class PIDController:
+    def __init__(self, kp, ki, kd):
+        self.kp = kp  # Proportional gain
+        self.ki = ki  # Integral gain
+        self.kd = kd  # Derivative gain
 
-lastderivative = 0 
-lastlastderivative = 0 
-integral = 0
-derivative = 0 
-pid = 0
+        self.prev_error = 0  # Previous error for derivative term
+        self.integral = 0  # Accumulated error for integral term
 
+    def update(self, error):
+        # Proportional term
+        p_term = self.kp * error
 
+        # Integral term
+        self.integral += error
+        i_term = self.ki * self.integral
 
+        # Derivative term
+        d_term = self.kd * (error - self.prev_error)
+        self.prev_error = error
+
+        # PID control output
+        pid_output = p_term + i_term + d_term
+
+        return pid_output
+
+#initialize instance of PID class
+pid = PIDController(kp=0.5, ki=0.1, kd=0.2)
 
 # Open a video capture object (you can replace '0' with the video file name)
 cap = cv2.VideoCapture(0)
@@ -145,13 +165,15 @@ while True:
     if square_result is not None and circle_result is not None:
         center_error = getErrors(square_center, circle_center)
         print(f" Center Error:", center_error)
+        control_output = pid.update(center_error)   
+        print(f" Control Output:", control_output)
         print()
     else:
         print(f" Center Error:", None)
 
     cv2.imshow('Square and Circle Detection', frame)
 
-    
+
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

@@ -61,32 +61,3 @@ submit_button.grid(row=3, column=0, columnspan=3, pady=10)
 
 # Start the Tkinter event loop
 root.mainloop()
-
-
-
-# import tkinter as tk
-
-# window = tk.Tk()
-# window.geometry("820x500")
-# window.title("Test ?")
-
-
-# p_slider = tk.Scale(window,  from_=0, to=15, orient="horizontal", label="Proportionnal", length=500, tickinterval=2.5, resolution=0.1)
-# p_slider.set(3)
-# p_slider.pack()
-# i_slider = tk.Scale(window,  from_=0, to=1, orient="horizontal", label="Integral", length=500, tickinterval=0.25, resolution=0.005)
-# i_slider.set(0)
-# i_slider.pack()
-# d_slider = tk.Scale(window,  from_=0, to=10, orient="horizontal", label="Derivative", length=500, tickinterval=10, resolution=0.1)
-# d_slider.set(6.2)
-# d_slider.pack()
-
-
-# p_slider.place(x=250, y= 0)
-# i_slider.place(x=250, y= 100)
-# d_slider.place(x=250, y= 200)
-
-# lmain = tk.Label(window)
-# lmain.pack()
-
-# window.mainloop()
