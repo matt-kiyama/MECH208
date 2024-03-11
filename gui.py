@@ -1,5 +1,8 @@
 import tkinter as tk
+import cv2
 from tkinter import ttk
+
+cap = cv2.VideoCapture(0)
 
 def update_slider_value(slider, text_var):
     try:
@@ -59,5 +62,15 @@ update_textbox_value(slider3, var3)
 submit_button = ttk.Button(root, text="Submit", command=submit_values)
 submit_button.grid(row=3, column=0, columnspan=3, pady=10)
 
+lmain = tk.Label(root)
+lmain.pack()
+
+#graph
+graphWindow = tk.Toplevel(root)
+graphWindow.title('Ball position')
+graphCanvas = tk.Canvas(graphWindow,width=480,height=480)
+graphCanvas.pack()
+
 # Start the Tkinter event loop
 root.mainloop()
+

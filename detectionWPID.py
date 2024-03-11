@@ -173,7 +173,6 @@ while True:
 
     cv2.imshow('Square and Circle Detection', frame)
 
-
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
