@@ -1,74 +1,29 @@
-import cv2
-import numpy as np
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk
-import detectionWPID as detection
 
 class MainWindow:
     def __init__(self, root):
         self.root = root
-        self.root.title("OpenCV GUI")
+        self.root.title("Main Window")
 
-        self.canvas = tk.Canvas(root)
-        self.canvas.pack()
+        self.label = ttk.Label(root, text="Main Window Content")
+        self.label.pack(padx=20, pady=20)
 
-        # Open a video capture object (you can replace '0' with the video file name)
-        self.cap = cv2.VideoCapture(0)
+        self.open_button = ttk.Button(root, text="Open Second Window", command=self.open_second_window)
+        self.open_button.pack(pady=10)
 
-        self.update()
+    def open_second_window(self):
+        self.second_window = tk.Toplevel(self.root)
+        self.second_window.title("Second Window")
 
-    def update(self):
-        # Read a frame from the video feed
-        ret, frame = self.cap.read()
+        self.second_label = ttk.Label(self.second_window, text="Second Window Content")
+        self.second_label.pack(padx=20, pady=20)
 
-        # Break the loop if no frame is captured
-        if not ret:
-            return
+        self.close_button = ttk.Button(self.second_window, text="Close Second Window", command=self.close_second_window)
+        self.close_button.pack(pady=10)
 
-        # Detect squares in the current frame
-        square_result = detection.detect_square(frame, min_area=200, max_area=15000)
-        # square_result = self.detect_square(frame, min_area=200, max_area=15000)
-
-        # Detect circle in the current frame
-        circle_result = detection.detect_ball(frame)
-        # circle_result = self.detect_ball(frame)
-
-        # Display the result
-        if square_result is not None:
-            square_center = square_result
-            square_center_x, square_center_y = square_center
-            print(f"Set point coordinates: ({square_center_x}, {square_center_y})", end="")
-        else:
-            print(f"Set point coordinates: ({None}, {None})", end="")
-
-        if circle_result is not None: 
-            circle_center, circle_radius = circle_result
-            circle_center_x, circle_center_y = circle_center
-            print(f" Ball coordinates: ({circle_center_x}, {circle_center_y}, {circle_radius})", end="")
-        else:
-            print(f" Ball coordinates: ({None}, {None}, {None})", end="")
-
-        if square_result is not None and circle_result is not None:
-            center_error = self.get_errors(square_center, circle_center)
-            print(f" Center Error:", center_error)
-            print()
-        else:
-            print(f" Center Error:", None)
-
-        # Convert OpenCV image to Tkinter-compatible format
-        img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(img)
-        img = ImageTk.PhotoImage(image=img)
-
-        # Update the canvas with the new image
-        self.canvas.config(width=img.width(), height=img.height())
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=img)
-        self.canvas.img = img
-
-        # Schedule the update method to be called after a delay
-        self.root.after(1, self.update)
-
+    def close_second_window(self):
+        self.second_window.destroy()
 
 class ThirdWindow:
     def __init__(self, root):

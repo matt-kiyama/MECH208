@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time
+import serial
 
 prevCircle = None
 dist = lambda x1,y1,x2,y2: (x1-x2)**2+(y1-y2)**2
@@ -10,6 +11,10 @@ square_center_y = None
 circle_center_x = None
 circle_center_y = None
 w = None
+
+# port = "/dev/ttyACM0"
+# baud = 115200
+# ser = serial.Serial(port, baud)
 
 def detect_ball(frame):
     global prevCircle, dist
@@ -101,6 +106,32 @@ def getErrors(xy_1, xy_2):
     error = dist(x1, y1, x2, y2)
     return error
 
+def getErrorInX(x1,  x2):
+    return x2 - x1
+
+def moveFans(control_value):
+    global base_value
+    global min_value
+    global max_value
+    pwm_l = base_value - control_value
+    pwm_r = base_value + control_value
+
+    if(pwm_l < min_value):
+        pwm_l = min_value
+    if(pwm_l > max_value):
+        pwm_l = max_value    
+    
+    if(pwm_r < min_value):
+        pwm_r = min_value
+    if(pwm_r > max_value):
+        pwm_r = max_value
+
+    control_string = str(pwm_l) + " " + str(pwm_r) + "\n"
+    #control_string = "10 10\n" #both fans at 10% duty cycle
+    
+    print(control_string)
+    #ser.write(control_string.encode('utf-8'))
+
 class PIDController:
     def __init__(self, kp, ki, kd):
         self.kp = kp  # Proportional gain
@@ -110,12 +141,13 @@ class PIDController:
         self.prev_error = 0  # Previous error for derivative term
         self.integral = 0  # Accumulated error for integral term
 
-    def update(self, error):
+    def update(self, error, deadZoneMin, deadZoneMax):
         # Proportional term
         p_term = self.kp * error
 
         # Integral term
-        self.integral += error
+        if(deadZoneMin < error < deadZoneMax ):
+            self.integral += error
         i_term = self.ki * self.integral
 
         # Derivative term
@@ -123,12 +155,21 @@ class PIDController:
         self.prev_error = error
 
         # PID control output
-        pid_output = p_term + i_term + d_term
+        pid_output = p_term
+        #pid_output = p_term + i_term + d_term
 
         return pid_output
 
-#initialize instance of PID class
-pid = PIDController(kp=0.5, ki=0.1, kd=0.2)
+#initialize 2 instances of PID class
+pid = PIDController(kp=0.1, ki=0.1, kd=0.2)
+min_value = 30
+base_value = 50
+max_value = 70
+
+#if error is within this pixel count then don't add to steady state
+pid_deadZone_min = -20
+pid_deadZone_max = 20
+
 
 # Open a video capture object (you can replace '0' with the video file name)
 cap = cv2.VideoCapture(0)
@@ -142,7 +183,7 @@ while True:
         break
 
     # Detect squares in the current frame
-    square_result = detect_square(frame, min_area=200, max_area=15000)
+    square_result = detect_square(frame, min_area=200, max_area=2000)
 
     # Detect circle in the current frame
     circle_result = detect_ball(frame)
@@ -164,9 +205,12 @@ while True:
 
     if square_result is not None and circle_result is not None:
         center_error = getErrors(square_center, circle_center)
-        print(f" Center Error:", center_error)
-        control_output = pid.update(center_error)   
+        center_error_x = getErrorInX(square_center_x, circle_center_x)
+        print(f" Center Error X:", center_error_x)
+        #print(f" Center Error:", center_error)
+        control_output = pid.update(center_error_x, pid_deadZone_min, pid_deadZone_max)   
         print(f" Control Output:", control_output)
+        moveFans(control_output)
         print()
     else:
         print(f" Center Error:", None)
