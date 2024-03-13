@@ -3,7 +3,7 @@ import numpy as np
 
 #0 is laptop cam 
 #1 is usb camera
-vid = cv2.VideoCapture(0)
+vid = cv2.VideoCapture(4)
 
 #in BGR
 upper_orange = (100, 250, 252)

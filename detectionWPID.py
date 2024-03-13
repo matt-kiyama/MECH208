@@ -13,7 +13,7 @@ circle_center_x = None
 circle_center_y = None
 w = None
 
-port = "/dev/ttyACM1"
+port = "/dev/ttyACM0"
 baud = 115200
 ser = serial.Serial(port, baud, write_timeout=0)
 update_rate = 2 #in ms
@@ -232,8 +232,8 @@ max_value = 75
 bias_coef = 0.835
 
 #if error is within this pixel count then don't add to steady state
-pid_deadZone_min = -55
-pid_deadZone_max = 55
+pid_deadZone_min = -65
+pid_deadZone_max = 65
 
 # Open a video capture object (you can replace '0' with the video file name)
 cap = cv2.VideoCapture(0)
