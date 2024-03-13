@@ -4,6 +4,7 @@ import time
 import serial
 
 prevCircle = None
+prevSquare = None
 dist = lambda x1,y1,x2,y2: (x1-x2)**2+(y1-y2)**2
 
 square_center_x = None
@@ -12,9 +13,37 @@ circle_center_x = None
 circle_center_y = None
 w = None
 
-# port = "/dev/ttyACM0"
-# baud = 115200
-# ser = serial.Serial(port, baud)
+port = "/dev/ttyACM1"
+baud = 115200
+ser = serial.Serial(port, baud, write_timeout=0)
+update_rate = 2 #in ms
+
+prev_time = time.time()
+
+def moving_average(data, window_size):
+    """
+    Calculate the moving average of a given data set and return a single value.
+
+    Parameters:
+        data (array-like): The input data.
+        window_size (int): The size of the moving window.
+
+    Returns:
+        float: The average of the moving averages.
+    """
+    # Convert data to numpy array
+    data = np.array(data)
+    
+    # Pad the data to handle edges
+    padded_data = np.pad(data, (window_size-1, 0), mode='constant', constant_values=np.nan)
+    
+    # Calculate the moving averages
+    moving_averages = np.convolve(padded_data, np.ones(window_size)/window_size, mode='valid')
+    
+    # Calculate the average of the moving averages
+    average_of_moving_averages = np.mean(moving_averages)
+    
+    return average_of_moving_averages
 
 def detect_ball(frame):
     global prevCircle, dist
@@ -51,7 +80,6 @@ def detect_ball(frame):
         return center, radius
     else:
         return None
-
 
 def detect_square(frame, min_area, max_area):
     # Convert the frame to grayscale
@@ -94,11 +122,10 @@ def detect_square(frame, min_area, max_area):
                     center_x = x + w // 2
                     center_y = y + h // 2
                     center = [center_x, center_y]
-
                     return center
 
     # Return None if no square is detected
-    return None
+    return prevSquare
 
 def getErrors(xy_1, xy_2):
     x1, y1 = xy_1
@@ -109,13 +136,23 @@ def getErrors(xy_1, xy_2):
 def getErrorInX(x1,  x2):
     return x2 - x1
 
-def moveFans(control_value):
+def moveFans(control_value, serial, stop):
     global base_value
     global min_value
     global max_value
+    global prev_time
+    global update_rate
+    global bias_coef
+
     pwm_l = base_value - control_value
     pwm_r = base_value + control_value
 
+    #bias compensation
+    pwm_r = pwm_r * bias_coef
+    pwm_l = pwm_l * 0.836
+    #pwm_l = pwm_l * bias_coef
+
+    #limit check
     if(pwm_l < min_value):
         pwm_l = min_value
     if(pwm_l > max_value):
@@ -126,17 +163,29 @@ def moveFans(control_value):
     if(pwm_r > max_value):
         pwm_r = max_value
 
-    control_string = str(pwm_l) + " " + str(pwm_r) + "\n"
-    #control_string = "10 10\n" #both fans at 10% duty cycle
+    #control_string = str(pwm_l) + " " + str(pwm_r) + "\n"
+    control_string = str(pwm_r) + " " + str(pwm_l) + "\n"
     
     print(control_string)
-    #ser.write(control_string.encode('utf-8'))
+    milliseconds_elapsed = (time.time() - prev_time) * 1000
+    print("millis " + str(milliseconds_elapsed)+ "\n")
+    if(milliseconds_elapsed > update_rate):
+        print(str(update_rate) + " elapsed\n")
+        serial.write(control_string.encode('utf-8'))
+        #ser.write(control_string.encode('utf-8'))
+        prev_time = time.time()
+    
+    if(stop):
+        control_string = str(0) + " " + str(0) + "\n"
+        serial.write(control_string.encode('utf-8'))
+
 
 class PIDController:
-    def __init__(self, kp, ki, kd):
+    def __init__(self, kp, ki, kd, update_rate):
         self.kp = kp  # Proportional gain
         self.ki = ki  # Integral gain
         self.kd = kd  # Derivative gain
+        self.update_rate = update_rate
 
         self.prev_error = 0  # Previous error for derivative term
         self.integral = 0  # Accumulated error for integral term
@@ -147,29 +196,44 @@ class PIDController:
 
         # Integral term
         if(deadZoneMin < error < deadZoneMax ):
-            self.integral += error
+            self.integral = self.integral + (error * 10)
+        #self.integral += error*self.update_rate    
         i_term = self.ki * self.integral
 
         # Derivative term
-        d_term = self.kd * (error - self.prev_error)
+        derivative = (error - self.prev_error) / 20
+        #derivative = (error - self.prev_error) / self.update_rate
+        d_term = self.kd * derivative
         self.prev_error = error
 
         # PID control output
-        pid_output = p_term
-        #pid_output = p_term + i_term + d_term
+        print("P Term: " + str(p_term) + "\n")
+        print("I Term: " + str(i_term) + "\n")
+        print("D Term: " + str(d_term) + "\n")
+        #pid_output = p_term + d_term
+        pid_output = p_term + i_term + d_term
 
         return pid_output
 
-#initialize 2 instances of PID class
-pid = PIDController(kp=0.1, ki=0.1, kd=0.2)
-min_value = 30
-base_value = 50
-max_value = 70
+# #initialize instance of PID class
+# pid = PIDController(kp=0.033, ki=0.00001, kd=3.235, update_rate=update_rate) 
+# #pid = PIDController(kp=0.028, ki=0.00001, kd=3.25, update_rate=update_rate) 
+# min_value = 50
+# base_value = 65
+# max_value = 75
+# bias_coef = 1
+    
+#initialize instance of PID class
+pid = PIDController(kp=0.045, ki=0.000013, kd=3.219, update_rate=update_rate) 
+#pid = PIDController(kp=0.028, ki=0.00001, kd=3.25, update_rate=update_rate) 
+min_value = 55
+base_value = 65
+max_value = 75
+bias_coef = 0.835
 
 #if error is within this pixel count then don't add to steady state
-pid_deadZone_min = -20
-pid_deadZone_max = 20
-
+pid_deadZone_min = -55
+pid_deadZone_max = 55
 
 # Open a video capture object (you can replace '0' with the video file name)
 cap = cv2.VideoCapture(0)
@@ -183,7 +247,7 @@ while True:
         break
 
     # Detect squares in the current frame
-    square_result = detect_square(frame, min_area=200, max_area=2000)
+    square_result = detect_square(frame, min_area=550, max_area=2500)
 
     # Detect circle in the current frame
     circle_result = detect_ball(frame)
@@ -192,33 +256,40 @@ while True:
     if square_result is not None:
         square_center = square_result
         square_center_x, square_center_y = square_center
-        print(f"Set point coordinates: ({square_center_x}, {square_center_y})", end="")
+        #print(f"Set point coordinates: ({square_center_x}, {square_center_y})", end="")
     else:
-        print(f"Set point coordinates: ({None}, {None})", end="")
+        pass
+        #print(f"Set point coordinates: ({None}, {None})", end="")
 
     if circle_result is not None: 
         circle_center, circle_radius = circle_result
         circle_center_x, circle_center_y = circle_center
-        print(f" Ball coordinates: ({circle_center_x}, {circle_center_y}, {circle_radius})", end="")
+        #print(f" Ball coordinates: ({circle_center_x}, {circle_center_y}, {circle_radius})", end="")
     else:
-        print(f" Ball coordinates: ({None}, {None}, {None})", end="")
+        pass
+        #print(f" Ball coordinates: ({None}, {None}, {None})", end="")
 
     if square_result is not None and circle_result is not None:
         center_error = getErrors(square_center, circle_center)
         center_error_x = getErrorInX(square_center_x, circle_center_x)
+        #center_error_x_avg = moving_average(center_error_x, 5)
         print(f" Center Error X:", center_error_x)
         #print(f" Center Error:", center_error)
         control_output = pid.update(center_error_x, pid_deadZone_min, pid_deadZone_max)   
-        print(f" Control Output:", control_output)
-        moveFans(control_output)
-        print()
+        #print(f"Control Output:", control_output)
+        #print()
+        moveFans(control_output, ser, stop=False)
+        #moveFans(0, ser, stop=False)
+        #print()
     else:
-        print(f" Center Error:", None)
+        pass
+        #print(f" Center Error:", None)
 
     cv2.imshow('Square and Circle Detection', frame)
 
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        moveFans(0, ser, stop=True)
         break
 
 # Release the video capture object and close the OpenCV windows
